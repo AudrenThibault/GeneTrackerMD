@@ -6,7 +6,7 @@
 #
 #    release/GeneTrackerMD-v0.1.0.bin   le tracker seul, sans morceau — celle
 #                                       qu'on publie et qu'on essaie dans ares
-#    geneTrackerTUTU.bin                la ROM de travail, avec le morceau
+#    geneTrackerMONMORCEAU.bin          la ROM de travail, avec le morceau
 #                                       dedans — celle qu'on met sur la carte
 #
 #  ⚠️ N'EN REFAIRE QU'UNE EST LE PIEGE. Trois fois de suite un correctif a ete
@@ -14,11 +14,13 @@
 #  cherche un defaut dans du code deja repare, et on a perdu des heures. Il n'y
 #  a rien a retenir, il y a ce script a lancer.
 #
-#  Usage : ./build_tout.sh [MORCEAU.MDM]      (par defaut morceaux/TUTU.MDM)
+#  Usage : ./build_tout.sh <MORCEAU.MDM>
+#
+#  Le .mdm est a toi : il n'est pas dans le depot.
 # ============================================================================
 set -e
 ICI=$(cd "$(dirname "$0")" && pwd)
-SRC=${1:-morceaux/TUTU.MDM}
+SRC=${1:?donner le .mdm du morceau de travail}
 
 if [ ! -f "$ICI/$SRC" ] && [ ! -f "$SRC" ]; then
   echo "morceau introuvable : $SRC" >&2

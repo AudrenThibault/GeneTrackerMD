@@ -1007,7 +1007,7 @@ static const int   FIC_COLS[FIC_MODES] = { 2, 10, 18 };
 // dans la liste tant qu'un mode n'a pas été validé.
 static int fic_mode, fic_ligne;
 // Le nom du dernier morceau chargé : c'est celui qu'on propose en
-// l'enregistrant. Charger TUTU, le retoucher, puis devoir retaper son nom
+// l'enregistrant. Charger un morceau, le retoucher, puis devoir retaper son nom
 // lettre par lettre n'a aucun sens.
 static char dernier_charge[MD_BIB_NOM + 1];
 // D'où vient le morceau qu'on a sous les doigts : un emplacement, un morceau

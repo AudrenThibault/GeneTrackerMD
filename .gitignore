@@ -31,7 +31,7 @@ __pycache__/
 # se refont à partir des .mdm de morceaux/. banque_pcm.c pèse un mégaoctet de
 # données d'échantillons écrites en texte C — le versionner ferait grossir le
 # dépôt à chaque changement de banque, pour rien.
-#   python3 outils/bibliotheque.py verser morceaux/TUTU.MDM
+#   python3 outils/bibliotheque.py verser MONMORCEAU.MDM
 source/banque_pcm.c
 source/banque_pcm.h
 source/morceaux_rom.c
@@ -65,3 +65,12 @@ outils/lit_sauvegarde
 outils/tables
 outils/essais/tables
 outils/essais/commandes
+
+# Le convertisseur A2M : il embarque une copie du lecteur du projet iPad,
+# qui est proprietaire. Le present depot est public sous GPL-3.
+outils/a2m/
+# Les ROMs de travail et les sauvegardes d emulateur.
+geneTracker*.bin
+*.ram
+*.ram.avant
+*.srm

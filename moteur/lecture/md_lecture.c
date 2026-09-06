@@ -80,7 +80,7 @@ typedef struct {
   // nul ». Sans ce drapeau, un pas d'arpège valant ZÉRO — le retour à la
   // note de base, le pas le plus courant d'un arpège — était pris pour
   // « rien à dire » et la voie gardait la hauteur du pas précédent. Relevé
-  // sur TUTU : la macro (+12, 0, +7) sonnait +12, +12, +7 ; la fondamentale
+  // mesuré : la macro (+12, 0, +7) sonnait +12, +12, +7 ; la fondamentale
   // n'était jamais jouée.
   uint8_t  mac_actif;
 
@@ -1180,7 +1180,7 @@ static void env_pas(int c) {
   // md_write_instrument ecrit env_amp[i] PUIS env_speed[i] a chaque tour ;
   // dans la structure, en revanche, les deux tableaux sont separes (53-55 et
   // 56-58). J'ai un jour « corrige » d'apres offsetof sur la structure, et
-  // casse toutes les enveloppes : sur TUTU, l'instrument 06 affichait
+  // casse toutes les enveloppes : mesuré, l'instrument 06 affichait
   // F4 8F -- au lieu de F8 -- --. Le fichier n'est pas un vidage de la
   // structure — il est ecrit champ par champ.
   int pt = v->env_pt; if (pt > 2) pt = 2;

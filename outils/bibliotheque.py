@@ -2,9 +2,13 @@
 """Fait passer les morceaux entre le tracker DS et celui de la Mega Drive.
 
     bibliotheque.py verser <a.mdm> [b.mdm…]      DS -> Mega Drive
-           UNE ROM PAR MORCEAU : geneTrackerTUTU.bin, geneTrackerFABA.bin…
+           UNE ROM PAR MORCEAU : geneTracker<NOM>.bin, un fichier chacun
     bibliotheque.py vierge [a.mdm ...]           la ROM qu'on publie : pas de
            morceau, mais la banque d'echantillons des .mdm donnes
+    bibliotheque.py a2m    <a.A2M> [d-ou-copier-la-banque.mdm]
+                                                 AdLib Tracker 2 -> Mega Drive
+                                                 (les deux fichiers sont LUS,
+                                                  jamais modifies)
     bibliotheque.py lire   <sauvegarde>          ce que contient la cartouche
     bibliotheque.py sortir <sauvegarde> <dossier> [d.mdm]   Mega Drive -> DS
            (le .mdm facultatif prete sa banque ; sinon c'est celle de la
@@ -457,7 +461,7 @@ def cmd_lire(chemin):
     print(f"  {vus} morceau(x), {BIB_FIN - BIB_DONNEES} octets de rayon")
 
 def nom_de_rom(src):
-    """geneTrackerTUTU, a partir de morceaux/TUTU.MDM."""
+    """geneTracker<NOM>, a partir du .mdm portant ce nom."""
     base = os.path.splitext(os.path.basename(src))[0]
     propre = "".join(c for c in base if c.isalnum() or c in "_-")
     return "geneTracker" + (propre or "SANSNOM")
@@ -691,6 +695,111 @@ def cmd_sortir(chemin, dossier, source=None):
         n += 1
     print(f"  {n} morceau(x) sortis")
 
+def cmd_verser_a2m(source, banque_src=None):
+    """UN MORCEAU ADLIB TRACKER 2 VERS SA PROPRE ROM.
+
+    ⚠️ CETTE COMMANDE NE TOUCHE A RIEN DE CE QUI MARCHE. « verser » et
+    « vierge » gardent leur chemin ; celle-ci en emprunte un a cote, et le
+    .A2M n'est jamais ouvert qu'en LECTURE — la conversion ecrit dans un
+    fichier separe.
+
+    ⚠️ FM SEULEMENT POUR L'INSTANT : les cinq premiers canaux du module qui
+    portent des notes vont sur les cinq voies FM, et rien d'autre n'est
+    converti. Un kick ou une caisse claire reste donc de la FM.
+    """
+    racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    outil = os.path.join(racine, 'outils', 'a2m', 'a2m2md')
+    if not os.path.exists(outil):
+        construis = os.path.join(racine, 'outils', 'a2m', 'construis.sh')
+        if not os.path.exists(construis):
+            raise SystemExit(
+                "outils/a2m/ est absent : c'est le convertisseur A2M, garde\n"
+                "hors depot parce qu'il reprend le lecteur du projet iPad.")
+        subprocess.run([construis], check=True)
+
+    nom = os.path.splitext(os.path.basename(source))[0].upper()
+    nom = "".join(c for c in nom if c.isalnum())[:10]
+    mdc = os.path.join(racine, 'outils', 'a2m', nom + '.mdc')
+    r = subprocess.run([outil, source, mdc], capture_output=True, text=True)
+    print(r.stdout.rstrip())
+    if r.returncode:
+        print(r.stderr.rstrip())
+        raise SystemExit("la conversion a echoue")
+
+    with open(mdc, 'rb') as g:
+        compact = bytearray(g.read())
+
+    # La banque : elle vient d'un .mdm, comme pour la ROM de publication. Un
+    # module A2M n'a pas d'echantillons, mais la voie PCM du tracker doit
+    # pouvoir servir des qu'on ouvre le morceau sur la console.
+    if banque_src:
+        banque, entrees, places, _ = banque_commune([banque_src])
+        n_ech = sum(1 for x in places if x is not None)
+    else:
+        banque, entrees, places, n_ech = b'', [], [], 0
+    print(f"  banque : {n_ech} echantillon(s)")
+
+    paquet = lzss(creux(compact))
+    rom = "geneTracker" + nom
+    print(f"  {nom:10s} -> {len(paquet):5d} octets comprimes")
+
+    with open(os.path.join(racine, 'source', 'morceaux_rom.h'), 'w') as g:
+        g.write("// Genere par outils/bibliotheque.py — ne pas editer.\n")
+        g.write("#ifndef MORCEAUX_ROM_H\n#define MORCEAUX_ROM_H\n"
+                "#include <stdint.h>\n\n")
+        g.write("#define MORCEAUX_ROM_MAX %d\n" % ROM_MORCEAUX_MAX)
+        g.write("#define MORCEAUX_ROM_CAPACITE %d\n\n" % ROM_MORCEAUX_OCTETS)
+        g.write("extern const uint8_t  morceaux_rom_n;\n")
+        g.write("extern const char     morceaux_rom_nom[MORCEAUX_ROM_MAX][11];\n")
+        g.write("extern const uint16_t morceaux_rom_taille[MORCEAUX_ROM_MAX];\n")
+        g.write("extern const uint32_t morceaux_rom_offset[MORCEAUX_ROM_MAX];\n")
+        g.write("extern const uint8_t  morceaux_rom_data[MORCEAUX_ROM_CAPACITE];\n")
+        g.write("\n#endif\n")
+    if len(paquet) > ROM_MORCEAUX_OCTETS:
+        raise SystemExit(f"{nom} : {len(paquet)} octets comprimes, la ROM "
+                         f"en reserve {ROM_MORCEAUX_OCTETS}")
+    with open(os.path.join(racine, 'source', 'morceaux_rom.c'), 'w') as g:
+        g.write("// Genere par outils/bibliotheque.py — ne pas editer.\n")
+        g.write('#include "morceaux_rom.h"\n\n')
+        g.write("const uint8_t morceaux_rom_n = 1;\n")
+        g.write("const char morceaux_rom_nom[MORCEAUX_ROM_MAX][11] = {%s};\n"
+                % ",".join('"%s"' % (nom if k == 0 else "")
+                           for k in range(ROM_MORCEAUX_MAX)))
+        g.write("const uint16_t morceaux_rom_taille[MORCEAUX_ROM_MAX] = {%s};\n"
+                % ",".join(str(len(paquet) if k == 0 else 0)
+                           for k in range(ROM_MORCEAUX_MAX)))
+        g.write("const uint32_t morceaux_rom_offset[MORCEAUX_ROM_MAX] = {%s};\n\n"
+                % ",".join("0" for _ in range(ROM_MORCEAUX_MAX)))
+        g.write("const uint8_t morceaux_rom_data[MORCEAUX_ROM_CAPACITE] = {\n")
+        for i2 in range(0, len(paquet), 16):
+            g.write("  " + ",".join(str(x) for x in paquet[i2:i2+16]) + ",\n")
+        g.write("};\n")
+
+    ecrit_banque(os.path.join(racine, 'source', 'banque_pcm.h'),
+                 entrees, places, banque)
+    r = subprocess.run([os.path.join(racine, 'build.sh'), rom], cwd=racine,
+                       capture_output=True, text=True)
+    for l in (r.stdout + r.stderr).splitlines():
+        if 'octets' in l or 'carte' in l or 'error' in l:
+            print("  " + l.strip())
+    if r.returncode:
+        raise SystemExit("la ROM n'a pas ete construite")
+
+    # ⚠️ LA SAUVEGARDE DE L'EMULATEUR MASQUE LA NOUVELLE VERSION.
+    # La ROM ne verse son morceau dans la bibliotheque que si AUCUN morceau du
+    # meme nom ne s'y trouve deja (rom_vers_bibliotheque, main.c). Reconvertir
+    # puis recharger dans l'emulateur rejouait donc l'ANCIENNE version sans
+    # rien signaler — on croit que la conversion n'a rien change. On ecarte
+    # donc la sauvegarde ; on la RENOMME plutot que de l'effacer, au cas ou
+    # elle contiendrait du travail fait dans l'emulateur.
+    for ext in ('.ram', '.srm', '.sav'):
+        vieux = os.path.join(racine, rom + ext)
+        if os.path.exists(vieux):
+            os.replace(vieux, vieux + '.avant')
+            print(f"  sauvegarde d'emulateur ecartee : {rom + ext} -> "
+                  f"{rom + ext}.avant")
+    print(f"  -> {rom}.bin")
+
 def main():
     # « vierge » ne prend aucun argument : elle ne fabrique que la ROM nue.
     if len(sys.argv) >= 2 and sys.argv[1] == 'vierge':
@@ -704,6 +813,8 @@ def main():
         # ⚠️ « verser » ne prend PLUS de sauvegarde : il ne fabrique que des
         # ROMs. Le deuxieme argument est deja un .mdm.
         cmd_verser(sys.argv[2:])
+    elif verbe == 'a2m':
+        cmd_verser_a2m(chemin, sys.argv[3] if len(sys.argv) > 3 else None)
     elif verbe == 'vierge':
         cmd_vierge()
     elif verbe == 'sortir':

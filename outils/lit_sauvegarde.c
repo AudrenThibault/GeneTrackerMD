@@ -2,7 +2,7 @@
 //  QUELLE SAUVEGARDE CONTIENT QUOI.
 //
 //  L'EverDrive range UNE SAUVEGARDE PAR NOM DE ROM. En essayant tour à tour
-//  geneTracker.bin, geneTrackerTUTU.bin et GeneTrackerMD-v0.1.0.bin, on se
+//  plusieurs noms de ROM successifs, on se
 //  retrouve avec trois fichiers qui portent le même morceau à trois âges
 //  différents — et rien, dans le Finder, ne dit lequel est le bon. On a perdu
 //  une soirée à croire que l'import de la DS était en panne alors qu'on lui

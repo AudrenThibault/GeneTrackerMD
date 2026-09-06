@@ -2,7 +2,7 @@
 # Fabrique une ROM. Seul prérequis : brew install m68k-elf-gcc
 #
 #   ./build.sh                -> geneTracker.bin
-#   ./build.sh geneTrackerTUTU -> geneTrackerTUTU.bin
+#   ./build.sh geneTrackerMONMORCEAU -> geneTrackerMONMORCEAU.bin
 #
 # ⚠️ LE NOM EST UN ARGUMENT parce qu'il y a désormais UNE ROM PAR MORCEAU.
 # Une ROM ne porte qu'un morceau et sa banque : la banque ne tient que 32
@@ -14,7 +14,7 @@ ROM="${1:-geneTracker}"
 
 # ⚠️ LE NOM DOIT CORRESPONDRE AU MORCEAU EMBARQUÉ, ET C'EST VÉRIFIÉ.
 # « verser » plusieurs morceaux laisse source/morceaux_rom.h sur le DERNIER.
-# Refaire ensuite « ./build.sh geneTrackerTUTU » à la main écrivait alors le
+# Refaire ensuite « ./build.sh geneTrackerMONMORCEAU » à la main écrivait alors le
 # mauvais morceau dans un fichier portant le bon nom — et on teste pendant une
 # heure une ROM qui n'est pas celle qu'on croit. C'est arrivé.
 if [ -n "$1" ] && [ "$1" != "geneTracker" ]; then

@@ -4,7 +4,7 @@
 # quand l'EverDrive en a laisse une par nom de ROM.
 #
 #   ./outils/sauvegardes.sh /Volumes/<carte>/EDMD/SAVE
-#   ./outils/sauvegardes.sh ~/Documents/geneTrackerTUTU_RAM.bin
+#   ./outils/sauvegardes.sh ~/Documents/une-sauvegarde.bin
 set -e
 ICI=$(cd "$(dirname "$0")" && pwd)
 R="$ICI/.."

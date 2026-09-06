@@ -63,7 +63,8 @@ def convertis(src):
     # ⚠️ LE BPM RÉEL N'EST PAS tempo*60/(vitesse*4).
     #
     # `tempo` est une fréquence d'interruption AT2, pas un BPM, et le fichier
-    # porte un DÉSACCORD DE TEMPO qui le corrige. TUTU.MDM a tempo 125,
+    # porte un DÉSACCORD DE TEMPO qui le corrige. Le morceau de référence
+    # a tempo 125,
     # vitesse 6 et un désaccord de -150 : la formule naïve donne 312 BPM, la
     # vraie 125. Le morceau partait donc deux fois et demie trop vite.
     #
@@ -137,7 +138,7 @@ def convertis(src):
         # ── LES TROIS MACROS PSG ──────────────────────────────────────
         # Volume, arpege, mode de bruit. Sans elles un instrument PSG venu du
         # tracker DS arrive muet ou plat : c'est la macro de volume qui donne
-        # son enveloppe, et TUTU en emploie.
+        # son enveloppe, et le morceau de référence en emploie.
         #
         # ⚠️ Le .mdm en garde 128 pas, la cartouche 64 (volume) et 32 (arpege,
         # bruit) : les trente-deux instruments doivent tenir dans 32 Ko. On
