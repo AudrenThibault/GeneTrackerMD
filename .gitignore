@@ -57,3 +57,11 @@ TRANSFERT.md
 
 # La sortie compilee du banc d essai des tables.
 outils/essais/tables
+
+# Les morceaux AdLib Tracker 2 sont des compositions, pas des sources.
+*.a2m
+*.A2M
+outils/lit_sauvegarde
+outils/tables
+outils/essais/tables
+outils/essais/commandes

@@ -421,8 +421,21 @@ static void entete_canal(int i) {
                  NOMS_CANAUX[i]);
 }
 
+// Déclarées ici parce que l'en-tête de la page SONG les affiche, et qu'elle
+// est dessinée bien avant l'endroit où elles vivent.
+static int modifie_depuis;
+static int emplacement_courant;
+
 static void song_dessine(void) {
   md_ecran_texte(36, 0, MD_ACCENT, "SONG");
+  // ⚠️ DIRE QUAND LE TRAVAIL N'EST PAS À L'ABRI. Tant qu'aucun emplacement
+  // n'a été choisi, le report automatique n'a nulle part où écrire : la
+  // composition ne vit qu'en RAM et disparaît à la coupure. C'est arrivé, et
+  // rien à l'écran ne le laissait deviner.
+  md_ecran_texte(0, 0, MD_DATA, "          ");
+  if (modifie_depuis)
+    md_ecran_texte(0, 0, emplacement_courant >= 0 ? MD_DATA : MD_ACCENT,
+                   emplacement_courant >= 0 ? "SAVING" : "NOT SAVED");
   for (int i = 0; i < MD_CANAUX; i++) entete_canal(i);
   // ⚠️ La colonne des chevrons se repeint AVEC la grille. Sans ça, faire
   // glisser la fenêtre pendant la lecture laissait les anciens chevrons là où
@@ -942,7 +955,21 @@ static const char *PROJ_NOMS[PJ_NOMBRE] = {
 
 static int message_reste;
 static const char *message;
-static int modifie_depuis;
+// (déclaré plus haut, pour l'en-tête de la page SONG)
+// ⚠️ LE REPORT AUTOMATIQUE, QUI N'EXISTAIT PAS.
+// `modifie_depuis` était posé à trois endroits et lu NULLE PART : le morceau
+// de travail ne rejoignait la cartouche que si on faisait SAVE à la main.
+// L'en-tête md_song.h promettait pourtant qu'il « est REPORTÉ tout seul dans
+// son emplacement dès qu'on cesse de toucher aux boutons ». Des heures de
+// composition sont parties comme ça, et personne ne pouvait s'en douter : rien
+// à l'écran ne disait que le travail n'était pas à l'abri.
+//
+// Deux garde-fous. On ne reporte QUE si un emplacement a été choisi — sinon on
+// écrirait par-dessus le morceau de quelqu'un d'autre. Et on ne reporte PAS
+// pendant la lecture : comprimer trente-deux kilo-octets prend plusieurs
+// images, et le son sauterait.
+static int repos;                  // images sans toucher un bouton
+#define REPOS_REPORT 60            // ~1,2 s sur une console PAL
 // ⚠️ UN MESSAGE DOIT SE REPEINDRE TOUT DE SUITE. Il ne s'affichait que si la
 // page se redessinait pour une autre raison : sur l'écran FILE, rien ne le
 // faisait, si bien que charger un morceau ne disait RIEN — le morceau était
@@ -985,6 +1012,7 @@ static int fic_mode, fic_ligne;
 static char dernier_charge[MD_BIB_NOM + 1];
 // D'où vient le morceau qu'on a sous les doigts : un emplacement, un morceau
 // de la ROM, ou rien du tout. C'est lui que l'étoile désigne.
+// -1 : aucun emplacement choisi, donc rien à reporter automatiquement.
 static int emplacement_courant = -1;
 // L'emplacement dont on vient de demander l'effacement, -1 si aucun. Tant
 // qu'il est posé, la question tient l'écran.
@@ -2341,6 +2369,22 @@ void principal(void) {
       if (md_lecture_en_cours()) md_lecture_position(&so, &ch, &ph, &in, &vo);
       md_miette_position(vo, so, ch, ph, in, md_pcm_etat()); }
     images_vues++;
+
+    // ── Le report automatique ─────────────────────────────────────────
+    if (md_manette_tenus() || md_manette_frappes()) repos = 0;
+    else if (repos < 30000) repos++;
+    if (modifie_depuis && repos > REPOS_REPORT && !md_lecture_en_cours()) {
+      if (emplacement_courant >= 0) {
+        if (md_bib_sauve(emplacement_courant)) {
+          modifie_depuis = 0;
+          dit_message("SAVED");
+        } else {
+          dit_message("SAVE FAILED - NO ROOM");
+          modifie_depuis = 0;   // inutile de le retenter en boucle
+        }
+        redessiner = 1;
+      }
+    }
     cmd_nom_suit();
     md_manette_lit();
     if (der_age < 30000) der_age++;
