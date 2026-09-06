@@ -1,7 +1,7 @@
 // ============================================================================
 //  GeneTrackerMD — un tracker de musique qui tourne sur la Sega Mega Drive.
 //  Copyright (C) 2026 Audren Thibault
-//  https://github.com/AudrenThibault/NativeMegadriveTracker
+//  https://github.com/AudrenThibault/GeneTrackerMD
 //
 //  Ce programme est un logiciel libre : vous pouvez le redistribuer et le
 //  modifier selon les termes de la GNU General Public License, version 3,

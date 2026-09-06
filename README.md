@@ -199,7 +199,7 @@ preserved. This project uses it, and it is the only condition added:
 > **You must keep, in the source code and in the legal notices the program
 > displays (the ABOUT page), the author credit "Audren Thibault" and the
 > address of the original repository
-> `https://github.com/AudrenThibault/NativeMegadriveTracker`.**
+> `https://github.com/AudrenThibault/GeneTrackerMD`.**
 
 In other words: do what you like with it, modify it, redistribute it, even
 sell it — but **the name and the link stay**, in the files as on screen.
