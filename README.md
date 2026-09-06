@@ -31,7 +31,7 @@ GeneTracker exists on three platforms, and **songs move between all of them**:
 | Platform | Name | Where |
 |---|---|---|
 | Sega Mega Drive | **GeneTrackerMD** | this repository |
-| Nintendo DS | **GeneTrackerDS** | [github.com/AudrenThibault/MDTrackerDS](https://github.com/AudrenThibault/MDTrackerDS) |
+| Nintendo DS | **GeneTrackerDS** | [github.com/AudrenThibault/GeneTrackerDS](https://github.com/AudrenThibault/GeneTrackerDS) |
 | iPad | **GeneTracker** | coming to the App Store |
 
 They are independent projects — code is copied between them, never referenced

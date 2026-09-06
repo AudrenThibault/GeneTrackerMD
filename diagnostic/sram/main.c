@@ -276,7 +276,7 @@ static uint8_t motif(uint32_t o) {
   return (uint8_t)((uint8_t)bas ^ (uint8_t)(bas >> 8) ^ (uint8_t)(o >> 16) ^ 0x5A);
 }
 
-static const char SIGNATURE[ENTETE] = "MDTRACKER-SRAM0";
+static const char SIGNATURE[ENTETE] = "GENETRACKER-SRAM0";
 
 // Appelée depuis les gestionnaires d'exception (voir boot.s). Elle remet
 // l'affichage debout toute seule : une exception peut survenir AVANT que la
@@ -304,9 +304,9 @@ void principal(void) {
   SRAM_BASCULE = 1;
   fond(F_NOIR);
 
-  ecrit(3, 1, PAL_BLANC, "MDTRACKER - DIAGNOSTIC SRAM");
+  ecrit(3, 1, PAL_BLANC, "GENETRACKER - DIAGNOSTIC SRAM");
   ecrit(3, 2, PAL_BLANC, "---------------------------");
-  j_txt("=== MDTRACKER / DIAGNOSTIC SRAM ==="); j_fin_ligne();
+  j_txt("=== GENETRACKER / DIAGNOSTIC SRAM ==="); j_fin_ligne();
   j_txt("CONSOLE : ");
   j_txt((*(volatile uint8_t *)0xA10001 & 0x40) ? "PAL 50 HZ" : "NTSC 60 HZ");
   j_fin_ligne();
@@ -414,7 +414,7 @@ void principal(void) {
   // conserve, tout à la fin de la fenêtre de 64 Ko.
   journal[journal_n] = 0;
   {
-    const char *marque = "MDTRACKER-LOG:";
+    const char *marque = "GENETRACKER-LOG:";
     uint32_t o = 0xF000;
     for (const char *p = marque; *p; p++) { SRAM[o + 1] = (uint8_t)*p; o += 2; }
     for (int k = 0; k < journal_n && o < 0xFFFE; k++) {
