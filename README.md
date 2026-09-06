@@ -38,6 +38,12 @@ They are independent projects — code is copied between them, never referenced
 — and the only contract they share is the **`.mdm` song format**. A song
 written on one opens on the others, samples included.
 
+One caveat when a song travels to the DS: it starts there with **FM5, PSG2 and
+PSG3 switched off**, because emulating those three in software is what makes
+DS playback stutter. Nothing is lost — the notes stay in the file and play
+again on the Mega Drive — but a ten-voice song will sound thinner on the DS
+until you turn them back on, and it will warn you when you open it.
+
 ### Moving a song between machines
 
 The tool lives here, in `outils/bibliotheque.py`. It speaks to the Mega Drive
