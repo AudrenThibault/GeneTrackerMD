@@ -116,6 +116,15 @@ static uint8_t derniere_note_voie[MD_CANAUX];
 // claire d'à côté. Zéro veut dire « cette voie n'a encore rien joué ».
 static uint8_t dernier_instr_voie[MD_CANAUX];
 
+// ⚠️ LA DERNIÈRE COMMANDE POSÉE, VALEUR COMPRISE.
+// Effacer une commande avec A+B puis la reposer avec A repartait de la
+// première lettre de la liste et d'une valeur nulle : il fallait retraverser
+// toute la liste pour retrouver la même, en déclenchant au passage un
+// changement de table ou de tempo. Une par colonne, comme le dernier
+// instrument est un par voie.
+static uint8_t der_cmd, der_cmd_val;      // colonne CMD
+static uint8_t der_mdcmd, der_mdcmd_val;  // colonne MD CMD
+
 static uint8_t instr_voie_courante(void);
 
 // INSTR et TABLE
@@ -1901,8 +1910,20 @@ static void pose(void) {
     }
     return;
   } else if (page == PAGE_TABLE) {
-    const uint32_t o = table_base(table_ligne) + (uint32_t)table_col;
-    if (table_col >= 2 && md_lit(o) == MD_VIDE) md_ecrit(o, 0);
+    const uint32_t base = table_base(table_ligne);
+    const uint32_t o = base + (uint32_t)table_col;
+    // 2-3 la première commande, 4-5 la seconde, 6-7 la commande MD. La lettre
+    // et sa valeur vont ensemble : reposer l'une sans l'autre n'a pas de sens.
+    if (table_col == 2 || table_col == 3 || table_col == 4 || table_col == 5) {
+      const uint32_t ol = base + (table_col <= 3 ? 2 : 4);
+      if (md_lit(ol) == MD_VIDE) {
+        md_ecrit(ol, der_cmd); md_ecrit(ol + 1, der_cmd_val);
+      } else { der_cmd = md_lit(ol); der_cmd_val = md_lit(ol + 1); }
+    } else if (table_col == 6 || table_col == 7) {
+      if (md_lit(base + 6) == MD_VIDE) {
+        md_ecrit(base + 6, der_mdcmd); md_ecrit(base + 7, der_mdcmd_val);
+      } else { der_mdcmd = md_lit(base + 6); der_mdcmd_val = md_lit(base + 7); }
+    } else if (table_col >= 2 && md_lit(o) == MD_VIDE) md_ecrit(o, 0);
     return;
   } else if (page == PAGE_PROJECT) {
     // Ces trois-là ÉCRASENT le morceau en cours : on ne les déclenche que sur
@@ -1976,8 +1997,14 @@ static void pose(void) {
           dernier_instr_voie[borne(voie_courante, 0, MD_CANAUX - 1)] = r.instr;
         break; }
       case 2: if (r.vel == MD_VIDE) r.vel = 0x7F; break;   // plein, l'échelle DefleMask
-      case 3: case 4: if (r.cmd == MD_VIDE) { r.cmd = 0; r.val = 0; } break;
-      case 5: case 6: if (r.mdcmd == MD_VIDE) { r.mdcmd = 0; r.mdval = 0; } break;
+      case 3: case 4:
+        if (r.cmd == MD_VIDE) { r.cmd = der_cmd; r.val = der_cmd_val; }
+        else { der_cmd = r.cmd; der_cmd_val = r.val; }
+        break;
+      case 5: case 6:
+        if (r.mdcmd == MD_VIDE) { r.mdcmd = der_mdcmd; r.mdval = der_mdcmd_val; }
+        else { der_mdcmd = r.mdcmd; der_mdcmd_val = r.mdval; }
+        break;
     }
     md_phrase_pose(phrase_id, phrase_ligne, &r);
   }
@@ -2145,6 +2172,14 @@ static void modifie(int sens, int grand) {
     else if (table_col == 6)
       md_ecrit(o, (uint8_t)borne((int)v + sens, 0, MD_MDCMD_NOMBRE - 1));
     else md_ecrit(o, (uint8_t)((int)v + sens * pas_ici));
+    // La commande qu'on vient de régler devient celle qu'un A reposera.
+    { const uint32_t bt = table_base(table_ligne);
+      if (table_col >= 2 && table_col <= 5) {
+        const uint32_t ol = bt + (table_col <= 3 ? 2 : 4);
+        if (md_lit(ol) != MD_VIDE) { der_cmd = md_lit(ol); der_cmd_val = md_lit(ol + 1); }
+      } else if (table_col >= 6 && md_lit(bt + 6) != MD_VIDE) {
+        der_mdcmd = md_lit(bt + 6); der_mdcmd_val = md_lit(bt + 7);
+      } }
     // Même raison que sur la page PHRASE : défiler les commandes les pose au
     // passage, il faut pouvoir revenir de celles qui règlent le tempo.
     md_lecture_reglages_remet();
@@ -2185,17 +2220,21 @@ static void modifie(int sens, int grand) {
       // suivante n'y changeait rien.
       case 3: if (r.cmd != MD_VIDE) {
                 r.cmd = (uint8_t)borne((int)r.cmd + sens * pas, 0, MD_CMD_NOMBRE - 1);
+                der_cmd = r.cmd; der_cmd_val = r.val;
                 md_lecture_reglages_remet();
               }
               break;
       case 4: r.val = (uint8_t)borne((int)r.val + sens * pas, 0, 255);
+              if (r.cmd != MD_VIDE) { der_cmd = r.cmd; der_cmd_val = r.val; }
               md_lecture_reglages_remet(); break;
       case 5: if (r.mdcmd != MD_VIDE) {
                 r.mdcmd = (uint8_t)borne((int)r.mdcmd + sens * pas, 0, MD_MDCMD_NOMBRE - 1);
+                der_mdcmd = r.mdcmd; der_mdcmd_val = r.mdval;
                 md_lecture_reglages_remet();
               }
               break;
       case 6: r.mdval = (uint8_t)borne((int)r.mdval + sens * pas, 0, 255);
+              if (r.mdcmd != MD_VIDE) { der_mdcmd = r.mdcmd; der_mdcmd_val = r.mdval; }
               md_lecture_reglages_remet(); break;
     }
     md_phrase_pose(phrase_id, phrase_ligne, &r);
