@@ -978,7 +978,7 @@ static void arme_commande(int c, const md_ligne_phrase *r) {
     const uint8_t neuve_v = (s == 0) ? r->val : r->mdval;
     if (!md_effet_continu(v->eff[s])) {
       v->eff[s] = MD_E_RIEN; v->effval[s] = 0;
-    } else if (neuf_e == (int)v->eff[s] && neuve_v == 0) {
+    } else if (md_effet_continu(neuf_e) && neuve_v == 0) {
       v->eff[s] = MD_E_RIEN; v->effval[s] = 0;
       // On repart droit : c'est ce que veut dire « arrêter ».
       v->fin = 0; v->vol_delta = 0;
@@ -986,12 +986,24 @@ static void arme_commande(int c, const md_ligne_phrase *r) {
     }
   }
 
+  // ⚠️ UNE VALEUR 00 ARRÊTE UN EFFET CONTINU, elle ne le relance pas.
+  // On l'annulait bien juste au-dessus... puis on le RÉARMAIT ici, deux
+  // lignes plus bas. Pire : les paramètres sont mémorisés, donc « 02 00 »
+  // repartait avec la vitesse du « 02 56 » d'avant et le glissando
+  // continuait — on croyait la commande sourde alors qu'elle se relançait.
+  //
+  // ⚠️ SEULEMENT LES CONTINUS. J et N se servent légitimement du zéro : « J00 »
+  // veut dire « saute à la ligne 0 », pas « n'y va pas ». Même chose pour le
+  // panoramique et le choix de table.
+  const int arrete0 = md_effet_continu(e0) && r->val == 0;
+  const int arrete1 = md_effet_continu(e1) && r->mdval == 0;
+
   // Une colonne vide ne dit rien : elle laisse en place ce qui tourne.
   // Le HOP n'est pas un effet — il déplace une position, et avance() s'en
   // charge ; le RETARD non plus — joue() l'a déjà mis de côté.
-  if (e0 != MD_E_RIEN && e0 != MD_E_HOP && e0 != MD_E_RETARD)
+  if (e0 != MD_E_RIEN && e0 != MD_E_HOP && e0 != MD_E_RETARD && !arrete0)
     arme_effet(c, 0, e0, r->val);
-  if (e1 != MD_E_RIEN && e1 != MD_E_RETARD)
+  if (e1 != MD_E_RIEN && e1 != MD_E_RETARD && !arrete1)
     arme_effet(c, 1, e1, r->mdval);
 }
 
@@ -1281,6 +1293,15 @@ static void table_cmds(int c, int t) {
     if (cmd == MD_VIDE) continue;
     const int e = md_cmd_effet(cmd);
     if (e == MD_E_RIEN || e == MD_E_HOP || e == MD_E_RETARD) continue;
+    // Une valeur 00 ARRÊTE un effet continu, ici comme dans une phrase.
+    if (md_effet_continu(e) && val == 0) {
+      if (v->eff[slot] != MD_E_RIEN) {
+        v->eff[slot] = MD_E_RIEN; v->effval[slot] = 0;
+        v->fin = 0; v->vol_delta = 0;
+        pose_hauteur(c); pose_volume(c);
+      }
+      continue;
+    }
     // On ne RÉARME que ce qui change : réarmer à chaque tour remettrait la
     // phase d'un vibrato à zéro et il ne tournerait jamais.
     if (v->eff[slot] != (uint8_t)e || v->effval[slot] != val)

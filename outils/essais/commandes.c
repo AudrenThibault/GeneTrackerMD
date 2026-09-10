@@ -263,6 +263,23 @@ int main(void) {
       }
     }
 
+    // ⚠️ UNE VALEUR 00 DOIT ARRETER L'EFFET. On pose un glissando fort sur la
+    // ligne 0, puis LE MEME a 00 sur la ligne 1 : la hauteur doit se figer.
+    { pose_morceau(0); m = md_travail();
+      m[MD_OFF_PHRASES + 5] = 0x02;              // MD CMD 02 = porta down
+      m[MD_OFF_PHRASES + 6] = 0x56;
+      { const uint32_t b2 = MD_OFF_PHRASES + MD_PHRASE_OCTETS;
+        m[b2 + 5] = 0x02; m[b2 + 6] = 0x00; }    // le meme, valeur nulle
+      trace(0, avec);
+      // Apres la ligne 1, plus aucune ecriture de hauteur ne doit apparaitre.
+      const char *apres = strstr(avec, "|");
+      int n = 0; for (const char *q = avec; *q; q++) if (*q == '|') n++;
+      const char *q2 = avec; int bar = 0;
+      while (*q2 && bar < 8) { if (*q2 == '|') bar++; q2++; }
+      printf("  02 56 puis 02 00        %s\n",
+             strstr(q2, "PITCH") ? "IL CONTINUE DE GLISSER" : "il s'arrete : oui");
+      (void)apres; (void)n; }
+
     // La VITESSE du pitch bend, en demi-tons par tick.
     { pose_morceau(0); m = md_travail();
       m[MD_OFF_PHRASES + 3] = (uint8_t)rang_de('P'); m[MD_OFF_PHRASES + 4] = 0x50;
