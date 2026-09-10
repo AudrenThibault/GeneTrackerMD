@@ -763,6 +763,16 @@ static void commande_tick(int c, int t) {
 // ⚠️ Elles ne valent QUE pour la voie qui les porte, et jusqu'à la note
 // suivante — qui recharge la voix et les efface. Une commande ne doit pas
 // abîmer l'instrument pour tout le morceau.
+// Une commande écrit ce que la page instrument AFFICHE, pas ce que le registre
+// attend. Deux écrans qui montrent le même paramètre doivent le montrer dans le
+// même sens, sinon le même nombre veut dire deux choses opposées.
+static uint8_t niveau_tl(uint8_t v) {          // 00 le plus bas, FF le plus fort
+  return (uint8_t)(127 - (v > 127 ? 127 : v));
+}
+static uint8_t duree_ar(uint8_t v) {           // 00 instantané, 1F le plus lent
+  return (uint8_t)(31 - (v > 31 ? 31 : v));
+}
+
 static void commande_md(int c, uint8_t rang, uint8_t val) {
   if (c >= 6 || c == MD_PCM_VOIE) return;   // la puce FM seulement
   const uint8_t x = (uint8_t)(val >> 4), y = (uint8_t)(val & 15);
@@ -773,19 +783,29 @@ static void commande_md(int c, uint8_t rang, uint8_t val) {
     case MD_P_LFO:   md_fm_pose_lfo(x != 0, y); break;
     case MD_P_FB:    md_fm_pose_alg_fb(c, md_lit(base + 44) & 7, val & 7); break;
     case MD_P_ALG:   md_fm_pose_alg_fb(c, val & 7, md_lit(base + 45) & 7); break;
-    case MD_P_TL1:   md_fm_pose_tl(c, 0, val); break;
-    case MD_P_TL2:   md_fm_pose_tl(c, 1, val); break;
-    case MD_P_TL3:   md_fm_pose_tl(c, 2, val); break;
-    case MD_P_TL4:   md_fm_pose_tl(c, 3, val); break;
+    // ⚠️ LA VALEUR EST UN NIVEAU, PAS UNE ATTÉNUATION.
+    // Le registre du YM2612 compte à l'envers : 0 y est le plus FORT, 127 le
+    // silence. La page instrument, elle, affiche « OUTPUT LEVEL » à l'endroit
+    // — 7F pour le plus fort. La commande passait la valeur brute : « 12 00 »
+    // mettait donc l'opérateur à fond et « 12 FF » l'éteignait, l'inverse de
+    // ce que le même nombre veut dire deux écrans plus loin. On écrit ce qu'on
+    // lit : FF le plus fort, 00 le plus bas.
+    case MD_P_TL1:   md_fm_pose_tl(c, 0, niveau_tl(val)); break;
+    case MD_P_TL2:   md_fm_pose_tl(c, 1, niveau_tl(val)); break;
+    case MD_P_TL3:   md_fm_pose_tl(c, 2, niveau_tl(val)); break;
+    case MD_P_TL4:   md_fm_pose_tl(c, 3, niveau_tl(val)); break;
     // ⚠️ Le quartet HAUT désigne l'opérateur, en comptant à partir de UN :
     // c'est la convention de DefleMask, et un morceau importé en dépend.
     case MD_P_MUL:   md_fm_pose_mul(c, (int)x - 1, y); break;
-    case MD_P_AR1:   md_fm_pose_ar(c, 0, val & 31); break;
-    case MD_P_AR2:   md_fm_pose_ar(c, 1, val & 31); break;
-    case MD_P_AR3:   md_fm_pose_ar(c, 2, val & 31); break;
-    case MD_P_AR4:   md_fm_pose_ar(c, 3, val & 31); break;
+    // Même raison : la page instrument nomme ce champ ATTACK et le montre
+    // comme une DURÉE — monter la valeur allonge l'attaque. Le registre, lui,
+    // compte à l'envers.
+    case MD_P_AR1:   md_fm_pose_ar(c, 0, duree_ar(val)); break;
+    case MD_P_AR2:   md_fm_pose_ar(c, 1, duree_ar(val)); break;
+    case MD_P_AR3:   md_fm_pose_ar(c, 2, duree_ar(val)); break;
+    case MD_P_AR4:   md_fm_pose_ar(c, 3, duree_ar(val)); break;
     case MD_P_ARALL:
-      for (int op = 0; op < 4; op++) md_fm_pose_ar(c, op, val & 31);
+      for (int op = 0; op < 4; op++) md_fm_pose_ar(c, op, duree_ar(val));
       break;
     case MD_P_PAN:
       md_fm_pose_pan(c, val, md_lit(base + 46) & 3, md_lit(base + 47) & 7);
